@@ -1,0 +1,32 @@
+{
+  "esp32": {
+    "ip": "192.168.4.1",
+    "port": 80
+  },
+  "camera": {
+    "source": 0,
+    "width": 640,
+    "height": 480,
+    "fps": 30
+  },
+  "detection": {
+    "scale_mm_per_pixel": 0.01,
+    "min_particle_area": 50,
+    "max_particle_area": 5000,
+    "threshold_value": 60,
+    "gaussian_blur": 5,
+    "gaussian_sigma": 1
+  },
+  "volume": {
+    "sample_volume_ml": 0.05
+  },
+  "web": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "debug": false
+  },
+  "logging": {
+    "log_file": "data/logs/detections.csv",
+    "auto_log_interval": 30
+  }
+}

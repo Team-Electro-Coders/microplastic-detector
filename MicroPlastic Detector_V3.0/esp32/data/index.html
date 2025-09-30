@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Microplastic Detector</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 ESP32 Microplastic Detector</h1>
+            <p class="subtitle">Fallback Control Interface</p>
+        </header>
+
+        <main>
+            <!-- Status Section -->
+            <section class="card">
+                <h2>System Status</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="label">Mode:</span>
+                        <span class="value" id="mode">Loading...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Particle Count:</span>
+                        <span class="value" id="count">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Mean Size:</span>
+                        <span class="value" id="size">-- mm</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">PC Connected:</span>
+                        <span class="value" id="pc-status">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Uptime:</span>
+                        <span class="value" id="uptime">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Free Memory:</span>
+                        <span class="value" id="memory">-- KB</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Control Section -->
+            <section class="card">
+                <h2>Mode Control</h2>
+                <div class="button-grid">
+                    <button class="btn btn-primary" onclick="setMode('detect')">
+                        ▶️ Detect Mode
+                    </button>
+                    <button class="btn btn-warning" onclick="setMode('clean')">
+                        🧹 Clean Mode
+                    </button>
+                    <button class="btn btn-secondary" onclick="setMode('standby')">
+                        ⏸️ Standby
+                    </button>
+                </div>
+            </section>
+
+            <!-- Network Information -->
+            <section class="card">
+                <h2>Network Info</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="label">WiFi Status:</span>
+                        <span class="value" id="wifi-status">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">AP Clients:</span>
+                        <span class="value" id="ap-clients">--</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">IP Address:</span>
+                        <span class="value" id="ip-address">--</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="card">
+                <h2>Quick Actions</h2>
+                <div class="button-grid">
+                    <button class="btn btn-info" onclick="refreshStatus()">
+                        🔄 Refresh
+                    </button>
+                    <button class="btn btn-danger" onclick="restartESP32()">
+                        🔃 Restart ESP32
+                    </button>
+                </div>
+            </section>
+
+            <!-- Info Section -->
+            <section class="card info-section">
+                <h3>ℹ️ Information</h3>
+                <p><strong>This is the ESP32 fallback interface.</strong></p>
+                <p>For full functionality, connect to the main PC dashboard at:</p>
+                <p class="highlight">http://&lt;PC_IP&gt;:5000</p>
+                <p>This interface provides basic monitoring and control when the PC client is not running.</p>
+            </section>
+        </main>
+
+        <footer>
+            <p>ESP32 Microplastic Detector v2.0</p>
+            <p>Last Update: <span id="last-update">--</span></p>
+        </footer>
+    </div>
+
+    <script>
+        // Auto-refresh status
+        let autoRefreshInterval;
+        
+        async function refreshStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                // Update status display
+                document.getElementById('mode').textContent = data.mode || 'Unknown';
+                document.getElementById('count').textContent = data.particle_count || 0;
+                document.getElementById('size').textContent = (data.mean_size_mm || 0).toFixed(2) + ' mm';
+                document.getElementById('pc-status').textContent = data.pc_connected ? '✅ Connected' : '❌ Disconnected';
+                document.getElementById('uptime').textContent = formatUptime(data.uptime || 0);
+                document.getElementById('memory').textContent = ((data.free_heap || 0) / 1024).toFixed(1) + ' KB';
+                document.getElementById('wifi-status').textContent = data.wifi_connected ? '✅ Connected' : '📡 AP Mode';
+                document.getElementById('ap-clients').textContent = data.ap_clients || 0;
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+                
+                // Update mode indicator
+                updateModeStyle(data.mode);
+                
+            } catch (error) {
+                console.error('Error fetching status:', error);
+                showMessage('Failed to refresh status', 'error');
+            }
+        }
+        
+        async function setMode(mode) {
+            try {
+                const response = await fetch(`/mode/${mode}`, { method: 'POST' });
+                
+                if (response.ok) {
+                    showMessage(`Mode set to ${mode}`, 'success');
+                    setTimeout(refreshStatus, 500);
+                } else {
+                    showMessage('Failed to set mode', 'error');
+                }
+            } catch (error) {
+                console.error('Error setting mode:', error);
+                showMessage('Failed to set mode', 'error');
+            }
+        }
+        
+        async function restartESP32() {
+            if (confirm('Are you sure you want to restart the ESP32?')) {
+                try {
+                    await fetch('/restart', { method: 'POST' });
+                    showMessage('Restarting ESP32...', 'info');
+                    
+                    // Stop auto-refresh during restart
+                    clearInterval(autoRefreshInterval);
+                    
+                    // Try to reconnect after 10 seconds
+                    setTimeout(() => {
+                        refreshStatus();
+                        startAutoRefresh();
+                    }, 10000);
+                    
+                } catch (error) {
+                    console.error('Error restarting:', error);
+                }
+            }
+        }
+        
+        function formatUptime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${hours}h ${minutes}m ${secs}s`;
+        }
+        
+        function updateModeStyle(mode) {
+            const modeElement = document.getElementById('mode');
+            modeElement.className = 'value mode-' + (mode || 'unknown');
+        }
+        
+        function showMessage(message, type) {
+            // Simple message display
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${type}`;
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+        
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(refreshStatus, 2000); // Refresh every 2 seconds
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshStatus();
+            startAutoRefresh();
+            
+            // Get IP address
+            fetch('/config')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('ip-address').textContent = window.location.hostname;
+                })
+                .catch(() => {
+                    document.getElementById('ip-address').textContent = window.location.hostname;
+                });
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            clearInterval(autoRefreshInterval);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP32 Microplastic Detector Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <!-- FIX: Pass ESP32 IP from Flask template -->
+    <script>
+        // Set ESP32 IP from server-side template
+        window.esp32_ip = '{{ esp32_ip }}';
+    </script>
+
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-microscope"></i>
+                    <h1>Microplastic Detector</h1>
+                </div>
+                <div class="header-controls">
+                    <div class="connection-status">
+                        <div id="esp32-status" class="status-indicator">
+                            <i class="fas fa-wifi"></i>
+                            <span>ESP32: <span id="esp32-text">Connecting...</span></span>
+                        </div>
+                        <div id="camera-status" class="status-indicator">
+                            <i class="fas fa-camera"></i>
+                            <span>Camera: <span id="camera-text">Initializing...</span></span>
+                        </div>
+                    </div>
+                    <div class="header-actions">
+                        <button id="theme-toggle" class="btn btn-secondary" title="Toggle Theme">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                        <button id="settings-btn" class="btn btn-secondary">
+                            <i class="fas fa-cog"></i> Settings
+                        </button>
+                        <button id="fullscreen-btn" class="btn btn-secondary">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- App Layout -->
+        <div class="app-layout">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <nav class="sidebar-nav">
+                    <a class="nav-item active" href="#top"><i class="fas fa-gauge-high"></i><span>Overview</span></a>
+                    <a class="nav-item" href="#video"><i class="fas fa-video"></i><span>Live Feed</span></a>
+                    <a class="nav-item" href="#analytics"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+                    <a class="nav-item" href="#controls"><i class="fas fa-sliders-h"></i><span>Controls</span></a>
+                    <a class="nav-item" href="#export"><i class="fas fa-download"></i><span>Data</span></a>
+                </nav>
+                <div class="sidebar-kpis">
+                    <div class="kpi">
+                        <div class="kpi-label">Camera FPS</div>
+                        <div class="kpi-value" id="kpi-fps">0.0</div>
+                        <canvas id="spark-fps"></canvas>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-label">Particle Count</div>
+                        <div class="kpi-value" id="kpi-count">0</div>
+                        <canvas id="spark-count"></canvas>
+                    </div>
+                    <div class="kpi">
+                        <div class="kpi-label">ESP32</div>
+                        <div class="badge" id="badge-esp">Disconnected</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="dashboard-main">
+            <!-- Video Feed Section -->
+            <section id="video" class="video-section">
+                <div class="video-container">
+                    <div class="video-header">
+                        <h2><i class="fas fa-video"></i> Live Detection Feed</h2>
+                        <div class="video-controls">
+                            <button id="play-pause-btn" class="btn btn-primary">
+                                <i class="fas fa-pause"></i>
+                            </button>
+                            <button id="snapshot-btn" class="btn btn-secondary">
+                                <i class="fas fa-camera"></i> Snapshot
+                            </button>
+                            <button id="calibrate-btn" class="btn btn-warning">
+                                <i class="fas fa-ruler"></i> Calibrate
+                            </button>
+                        </div>
+                    </div>
+                    <div class="video-display">
+                        <img id="video-feed" src="/api/frame" alt="Live Video Feed" />
+                        <div class="video-overlay">
+                            <div class="fps-counter">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span id="fps-display">0 FPS</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Statistics Section -->
+            <section id="top" class="stats-section">
+                <div class="stats-grid">
+                    <!-- Current Statistics -->
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3><i class="fas fa-hashtag"></i> Particle Count</h3>
+                        </div>
+                        <div class="stat-value" id="particle-count">0</div>
+                        <div class="stat-subtitle">particles detected</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3><i class="fas fa-ruler-horizontal"></i> Average Size</h3>
+                        </div>
+                        <div class="stat-value" id="average-size">0.00</div>
+                        <div class="stat-subtitle">mm diameter</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3><i class="fas fa-flask"></i> Concentration</h3>
+                        </div>
+                        <div class="stat-value" id="concentration">0</div>
+                        <div class="stat-subtitle">particles/mL</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <h3><i class="fas fa-clock"></i> Session Time</h3>
+                        </div>
+                        <div class="stat-value" id="session-time">00:00:00</div>
+                        <div class="stat-subtitle">elapsed</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section id="analytics" class="charts-section">
+                <div class="charts-grid">
+                    <!-- Size Distribution Chart -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-bar"></i> Particle Size Distribution</h3>
+                            <div class="chart-controls">
+                                <select id="size-chart-range">
+                                    <option value="current">Current Sample</option>
+                                    <option value="1min">Last Minute</option>
+                                    <option value="5min">Last 5 Minutes</option>
+                                    <option value="session">Full Session</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="chart-content">
+                            <canvas id="size-distribution-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Count Over Time Chart -->
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-chart-line"></i> Detection Count Over Time</h3>
+                            <div class="chart-controls">
+                                <select id="count-chart-range">
+                                    <option value="1min">Last Minute</option>
+                                    <option value="5min">Last 5 Minutes</option>
+                                    <option value="30min">Last 30 Minutes</option>
+                                    <option value="session">Full Session</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="chart-content">
+                            <canvas id="count-over-time-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Control Panel -->
+            <section id="controls" class="control-section">
+                <div class="control-panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-sliders-h"></i> Detection Controls</h3>
+                    </div>
+                    <div class="control-grid">
+                        <!-- Mode Control -->
+                        <div class="control-group">
+                            <label for="detection-mode">Detection Mode:</label>
+                            <select id="detection-mode">
+                                <option value="standby">Standby</option>
+                                <option value="detect" selected>Detection</option>
+                                <option value="clean">Cleaning</option>
+                            </select>
+                        </div>
+
+                        <!-- Threshold Control -->
+                        <div class="control-group">
+                            <label for="threshold-slider">
+                                Threshold: <span id="threshold-value">60</span>
+                            </label>
+                            <input type="range" id="threshold-slider" min="10" max="200" value="60">
+                        </div>
+
+                        <!-- Min Area Control -->
+                        <div class="control-group">
+                            <label for="min-area-slider">
+                                Min Area: <span id="min-area-value">50</span> px²
+                            </label>
+                            <input type="range" id="min-area-slider" min="10" max="500" value="50">
+                        </div>
+
+                        <!-- Max Area Control -->
+                        <div class="control-group">
+                            <label for="max-area-slider">
+                                Max Area: <span id="max-area-value">5000</span> px²
+                            </label>
+                            <input type="range" id="max-area-slider" min="500" max="10000" value="5000">
+                        </div>
+                    </div>
+                    
+                    <div class="control-actions">
+                        <button id="reset-params-btn" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i> Reset Defaults
+                        </button>
+                        <button id="save-params-btn" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Parameters
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Export Section -->
+            <section id="export" class="export-section">
+                <div class="export-panel">
+                    <div class="panel-header">
+                        <h3><i class="fas fa-download"></i> Data Export</h3>
+                    </div>
+                    <div class="export-options">
+                        <div class="history-block">
+                            <h4 style="margin:0 0 0.75rem 0;color:var(--text-secondary);">Recent History</h4>
+                            <div id="history-table" class="table"></div>
+                        </div>
+                        <div class="export-controls">
+                            <div class="date-range">
+                                <label for="export-start">From:</label>
+                                <input type="datetime-local" id="export-start">
+                                <label for="export-end">To:</label>
+                                <input type="datetime-local" id="export-end">
+                            </div>
+                            <div class="export-format">
+                                <label for="export-format-select">Format:</label>
+                                <select id="export-format-select">
+                                    <option value="csv">CSV</option>
+                                    <option value="json">JSON</option>
+                                    <option value="xlsx">Excel</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="export-actions">
+                            <button id="export-current-btn" class="btn btn-secondary">
+                                <i class="fas fa-file-export"></i> Export Current
+                            </button>
+                            <button id="export-range-btn" class="btn btn-primary">
+                                <i class="fas fa-download"></i> Export Range
+                            </button>
+                            <button id="generate-report-btn" class="btn btn-success">
+                                <i class="fas fa-file-pdf"></i> Generate Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <footer class="dashboard-footer">
+                <div class="footer-content">
+                    <span>ESP32 Microplastic Detector</span>
+                    <span class="dot"></span>
+                    <span id="footer-uptime">Uptime: 00:00:00</span>
+                </div>
+            </footer>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Overlays -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-cog"></i> System Settings</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Settings content will be loaded dynamically -->
+                <div class="settings-tabs">
+                    <button class="tab-button active" data-tab="detection">Detection</button>
+                    <button class="tab-button" data-tab="camera">Camera</button>
+                    <button class="tab-button" data-tab="system">System</button>
+                </div>
+                <div class="tab-content" id="settings-content">
+                    <!-- Content loaded by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-settings">Cancel</button>
+                <button class="btn btn-primary" id="save-settings">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="calibration-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-ruler"></i> Scale Calibration</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="calibration-instructions">
+                    <p>1. Place an object of known size in the camera view</p>
+                    <p>2. Click two points spanning the known distance</p>
+                    <p>3. Enter the actual distance in millimeters</p>
+                </div>
+                <div class="calibration-canvas">
+                    <canvas id="calibration-canvas"></canvas>
+                </div>
+                <div class="calibration-input">
+                    <label for="actual-distance">Actual distance (mm):</label>
+                    <input type="number" id="actual-distance" step="0.1" placeholder="10.0">
+                    <button id="calculate-scale" class="btn btn-primary" disabled>Calculate Scale</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>
+

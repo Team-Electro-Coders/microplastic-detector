@@ -1,0 +1,44 @@
+# ESP32 Microplastic Detector - Python Dependencies
+# Updated for compatibility with NumPy 1.x (NumPy 2.x causes import errors)
+
+# Core Computer Vision and Numerical Computing
+opencv-python-headless==4.10.0.84
+numpy>=1.24.0,<2.0
+
+# Web Framework and API
+flask==3.0.0
+flask-cors==4.0.0
+werkzeug==3.0.0
+
+# HTTP Client for ESP32 Communication
+requests==2.31.0
+urllib3==2.0.4
+
+# Data Processing and Analysis
+pandas>=2.0.0,<2.2.0
+scipy>=1.11.0,<1.12.0
+
+# Excel Export Support
+openpyxl==3.1.2
+
+# Optional Machine Learning (uncomment if needed)
+# tensorflow>=2.15.0
+# scikit-learn>=1.3.0
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3
+click==8.1.7
+
+# Development and Testing (optional)
+# pytest>=7.4.0
+# pytest-cov>=4.1.0
+
+# Performance monitoring (optional)
+# psutil>=5.9.5
+
+# Configuration management (optional)
+# pyyaml>=6.0.1
+
+# Logging enhancements (optional)
+# colorlog>=6.7.0

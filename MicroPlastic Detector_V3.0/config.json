@@ -1,0 +1,85 @@
+{
+  "esp32": {
+    "ip": "192.168.4.1",
+    "port": 80,
+    "timeout": 5,
+    "retry_attempts": 3,
+    "retry_delay": 1
+  },
+  "camera": {
+    "source": 0,
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "auto_exposure": true,
+    "brightness": 0,
+    "contrast": 32,
+    "saturation": 32
+  },
+  "detection": {
+    "scale_mm_per_pixel": 0.01,
+    "min_particle_area": 50,
+    "max_particle_area": 5000,
+    "threshold_value": 60,
+    "gaussian_blur": 5,
+    "gaussian_sigma": 1,
+    "morphology_close_kernel": 3,
+    "morphology_open_kernel": 2,
+    "min_aspect_ratio": 0.33,
+    "max_aspect_ratio": 3.0,
+    "min_solidity": 0.5
+  },
+  "volume": {
+    "sample_volume_ml": 0.05,
+    "flow_rate_ml_per_min": 1.0,
+    "chamber_depth_mm": 2.0
+  },
+  "web": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "debug": false,
+    "auto_reload": false,
+    "threaded": true
+  },
+  "logging": {
+    "log_file": "data/logs/detections.csv",
+    "auto_log_interval": 30,
+    "max_log_size_mb": 100,
+    "backup_count": 5,
+    "log_level": "INFO"
+  },
+  "performance": {
+    "max_fps": 30,
+    "processing_threads": 1,
+    "frame_skip": 0,
+    "roi_enabled": false,
+    "roi_x": 0,
+    "roi_y": 0,
+    "roi_width": 640,
+    "roi_height": 480
+  },
+  "display": {
+    "show_contours": true,
+    "show_bounding_boxes": true,
+    "show_center_points": true,
+    "show_size_labels": true,
+    "show_info_overlay": true,
+    "color_particles": [0, 255, 0],
+    "color_text": [255, 255, 255],
+    "color_background": [0, 0, 0]
+  },
+  "alerts": {
+    "high_concentration_threshold": 1000,
+    "enable_email_alerts": false,
+    "email_smtp_server": "",
+    "email_port": 587,
+    "email_username": "",
+    "email_password": "",
+    "email_recipients": []
+  },
+  "calibration": {
+    "reference_object_size_mm": 10.0,
+    "calibration_samples": 10,
+    "auto_calibration": false
+  }
+}
