@@ -24,7 +24,7 @@ The project's evolution is documented and implemented across three version folde
 
 ---
 
-## 🛠️ Version Summaries & Features
+## Version Summaries & Features
 
 ### 1. MicroPlastic\_Detector\_V1.0 (Basic)
 
@@ -66,7 +66,7 @@ This version introduces an **ESP32** for connectivity and a web interface, movin
 
 ---
 
-## ⚙️ How to Get Started
+## How to Get Started
 
 To begin working with any version, navigate to the respective folder and refer to its internal documentation (or the full PDF guides provided) for detailed setup and usage instructions.
 
