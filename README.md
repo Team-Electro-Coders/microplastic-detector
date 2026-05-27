@@ -6,13 +6,13 @@ This repository contains three distinct versions of our real-time microplastic d
 
 ---
 
-## 🚀 Project Overview
+## Project Overview
 
 The core goal of this project is to create a real-time system that combines **computer vision (OpenCV)** with embedded hardware (Arduino/ESP32) to automatically identify and alert users about microplastic particles in a video stream.
 
 ---
 
-## 📦 Repository Structure
+## Repository Structure
 
 The project's evolution is documented and implemented across three version folders:
 
